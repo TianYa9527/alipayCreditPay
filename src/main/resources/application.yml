@@ -53,8 +53,8 @@ payConfig:
   merchantId: 581631
   # 机构商户密码
   key: 2ep65eseuw39n25c
-  # 费率
-  consRate: 0.85
+  # 费率-具体与机构商户商定
+  consRate: 0.35
   # 如果有域名或者外网ip，则配置成应用后台的callback方法访问地址，如http://56.34.124.44/alipayCreditPay/callback.如果不配置，则只有主动去查询了。
   notifyUrl: test
   clientIp: 223.8.8.8
