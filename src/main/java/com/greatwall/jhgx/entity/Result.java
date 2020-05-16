@@ -57,6 +57,18 @@ public class Result<T> implements Serializable {
         return new Result(ResultEnum.FAIL.getCode(), msg, null);
     }
 
+    public static <T> Result<T> paying(String msg, T data) {
+        return new Result<>(ResultEnum.PAYING.getCode(), msg, data);
+    }
+
+    public static <T> Result<T> paying(T data) {
+        return new Result<>(ResultEnum.PAYING.getCode(), StringUtils.EMPTY, data);
+    }
+
+    public static Result paying(String msg) {
+        return new Result(ResultEnum.PAYING.getCode(), msg, null);
+    }
+
     public static boolean isSuccess(Result result) {
         return result != null && StringUtils.equals(ResultEnum.SUCCESS.getCode(), result.result);
     }

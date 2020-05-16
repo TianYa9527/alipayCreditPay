@@ -2,6 +2,8 @@ package com.greatwall.jhgx.rest;
 
 import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.greatwall.component.ccyl.common.utils.DateUtil;
 import com.greatwall.jhgx.domain.Member;
 import com.greatwall.jhgx.domain.PayOrder;
@@ -13,10 +15,7 @@ import com.greatwall.jhgx.entity.Result;
 import com.greatwall.jhgx.service.MemberService;
 import com.greatwall.jhgx.service.PayOrderService;
 import com.greatwall.jhgx.service.UploadImageService;
-import com.greatwall.jhgx.util.CommonUtil;
-import com.greatwall.jhgx.util.CurrencyUtils;
-import com.greatwall.jhgx.util.HttpClientUtil;
-import com.greatwall.jhgx.util.MD5Util;
+import com.greatwall.jhgx.util.*;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -26,18 +25,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import sun.misc.BASE64Encoder;
 
 import java.io.IOException;
-import java.util.Date;
-import java.util.Hashtable;
-import java.util.List;
+import java.util.*;
 
 @Slf4j
 @Api(tags = "支付")
 @RestController
 @RequestMapping("/alipayCreditPay/")
 public class PayController {
+    private static final Gson g = new Gson();
 
     @Autowired
     private PayOrderService payOrderService;
@@ -150,8 +147,8 @@ public class PayController {
     public Result uploadImage(@RequestParam("data") String data, @RequestParam("file") MultipartFile file) throws IOException {
 
         String suffix = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".") + 1);
-        BASE64Encoder base64Encoder =new BASE64Encoder();
-        String base64EncoderImg = file.getOriginalFilename()+","+ base64Encoder.encode(file.getBytes());
+        Base64.Encoder encoder = Base64.getEncoder();
+        String base64EncoderImg = file.getOriginalFilename()+","+ encoder.encodeToString(file.getBytes());
 
         UploadImage uploadImage = JSON.parseObject(data, UploadImage.class);
         uploadImage.setMerchantId(payConfigMerchantId);
@@ -404,7 +401,12 @@ public class PayController {
      * @return
      */
     private boolean checkSign(PayFromOutsideVo payFromOutsideVo) {
-        String signToComp = MD5Util.md5(md5Key);
+        String json = g.toJson(payFromOutsideVo);
+        Map<String,String> map = g.fromJson(json,
+                new TypeToken<Map<String, String>>() {}.getType());
+        map.remove("sign");
+        String prams = SignUtil.sortAndSerialize(map,md5Key);
+        String signToComp = MD5Util.md5(prams);
         return payFromOutsideVo.getSign().equals(signToComp);
     }
 
@@ -451,7 +453,7 @@ public class PayController {
                 return Result.success("支付成功");
             } else if ("01".equals(commonResponse.getResCode())) {
                 payOrderUpdate.setPayStatus("paying");
-                return Result.fail("支付处理中，请稍后查询支付结果");
+                return Result.paying("支付处理中，请稍后查询支付结果");
             } else {
                 payOrderUpdate.setPayStatus("fail");
                 return Result.fail("支付失败" + commonResponse.getResMsg());
@@ -459,7 +461,7 @@ public class PayController {
         } catch (Exception e) {
             log.error("支付异常，请稍后查询支付结果", e);
             payOrderUpdate.setPayStatus("abnormal");
-            return Result.fail("支付异常，请稍后查询支付结果");
+            return Result.paying("支付异常，请稍后查询支付结果");
         } finally {
             //更新订单状态
             boolean updateResult = payOrderService.updateById(payOrderUpdate);

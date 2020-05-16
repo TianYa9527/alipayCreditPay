@@ -9,7 +9,9 @@ public enum ResultEnum {
     /**
      * 失败
      */
-    FAIL("fail");
+    FAIL("fail"),
+
+    PAYING("paying");
 
     private String code;
 
